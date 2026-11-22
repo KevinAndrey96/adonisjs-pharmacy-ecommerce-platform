@@ -4,16 +4,22 @@
 const Schema = use('Schema')
 
 class AddFatherToProductSchema extends Schema {
-  up () {
-    this.table('add_father_to_products', (table) => {
-      // alter table
-    })
+  async up () {
+    const exists = await this.hasColumn('products', 'father')
+    if (!exists) {
+      this.table('products', (table) => {
+        table.string('father', 200).nullable().after('category')
+      })
+    }
   }
 
-  down () {
-    this.table('add_father_to_products', (table) => {
-      // reverse alternations
-    })
+  async down () {
+    const exists = await this.hasColumn('products', 'father')
+    if (exists) {
+      this.table('products', (table) => {
+        table.dropColumn('father')
+      })
+    }
   }
 }
 

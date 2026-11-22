@@ -1,4 +1,5 @@
 'use strict'
+const Env = use('Env')
 const Product = use('App/Models/Product')
 const Client = use('App/Models/Client')
 const Category = use('App/Models/Category')
@@ -261,12 +262,13 @@ class ProductController {
         console.log("Proceso completo")
 
         const Mail = use('Mail')
+        const mailFrom = Env.get('MAIL_FROM', 'no-reply@pharmastore.local')
         console.log(order.toJSON())
         await Mail.send('emails.order', {order: order.toJSON(), prods: prods}, (message) => {
           message
             .to(email)
-            .from('no-reply@hiperpharma.com')
-            .subject('Confirmación de pedido')
+            .from(mailFrom)
+            .subject('Confirmación de pedido - PharmaStore')
             console.log("Enviado Correo")
         })
 
@@ -275,22 +277,26 @@ class ProductController {
           order.gateway = "Contraentrega";
           await order.save()
           return view.render('order_completed')
-        }else
-        {  
+        } else {  
           const axios = require('axios');
           var FormData = require('form-data');
 
+          const gatewayUser = Env.get('PAYMENT_GATEWAY_USER', 'sandbox_user')
+          const gatewayPass = Env.get('PAYMENT_GATEWAY_PASSWORD', 'sandbox_pass')
+          const gatewayUrl = Env.get('PAYMENT_GATEWAY_URL', 'https://ecouat.credibanco.com/payment/rest/register.do')
+          const appUrl = Env.get('APP_URL', 'http://localhost:3333')
+
           var bodyFormData = new FormData();
-          bodyFormData.append('userName', 'GATEWAY_USERNAME');
-          bodyFormData.append('password', 'GATEWAY_PASSWORD');
+          bodyFormData.append('userName', gatewayUser);
+          bodyFormData.append('password', gatewayPass);
           bodyFormData.append('orderNumber', order.id);
-          bodyFormData.append('amount',  order.value+"00");
-          bodyFormData.append('returnUrl', "https://hiperpharma.com/pay");
+          bodyFormData.append('amount',  order.value + "00");
+          bodyFormData.append('returnUrl', `${appUrl}/pay`);
           bodyFormData.append('description', prods);
 
           await axios({
             method: 'post',
-            url: 'https://ecouat.credibanco.com/payment/rest/register.do',
+            url: gatewayUrl,
             data: bodyFormData,
             headers: {
               'content-type': `multipart/form-data; boundary=${bodyFormData._boundary}`,

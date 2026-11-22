@@ -95,19 +95,8 @@
 
 					var total=formatCurrency("es-CO", "COP", 0, parseInt(respuesta.price)*parseInt(objeto.cart[j].Quantity));
 					var appe = document.getElementById("tabody")
-					if(respuesta.image==null)
-					{
-						respuesta.image="/placeholder.png"
-					}else
-					{
-						axios.get('https://hiperpharma.com/'+respuesta.id+".png")
-						.then(function (response) {
-							console.log("Imagen Ok");
-						})
-						.catch(function (error) {
-							// handle error
-							console.log("Imagen No Ok");
-						})
+					if (!respuesta.image) {
+						respuesta.image = "/placeholder.png"
 					}
 					
 					$(appe).after('<tr><td><div class="thumb_cart"><img  src="'+

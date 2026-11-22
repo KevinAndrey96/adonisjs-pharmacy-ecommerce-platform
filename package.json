@@ -1,20 +1,30 @@
 {
-  "name": "adonis-fullstack-app",
-  "version": "4.1.0",
-  "adonis-version": "4.1.0",
-  "description": "The fullstack application boilerplate for Adonisjs",
-  "main": "index.js",
+  "name": "pharmacy-ecommerce-platform",
+  "version": "1.0.0",
+  "description": "Open-source full-stack pharmacy & drugstore e-commerce platform with inventory management backoffice built with Node.js and AdonisJS",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node ace test"
+    "dev": "node server.js",
+    "migrate": "node ace migration:run",
+    "seed": "node ace seed",
+    "test": "node ace migration:status",
+    "syntax-check": "node -c server.js ace app/**/*.js start/*.js config/*.js database/**/*.js"
   },
   "keywords": [
+    "pharmacy",
+    "ecommerce",
+    "drugstore",
+    "inventory-management",
+    "nodejs",
     "adonisjs",
-    "adonis-app"
+    "javascript",
+    "fullstack",
+    "open-source"
   ],
-  "author": "",
-  "license": "UNLICENSED",
-  "private": true,
+  "author": "Kevin Andrey Herrera Silva <kahs_kevin@hotmail.com>",
+  "license": "MIT",
+  "private": false,
   "dependencies": {
     "@adonisjs/ace": "^5.0.8",
     "@adonisjs/auth": "^3.0.7",
@@ -30,9 +40,9 @@
     "axios": "^0.19.2",
     "form-data": "^3.0.0",
     "mysql": "^2.18.1",
-    "objection": "^2.2.2"
+    "objection": "^2.2.2",
+    "sqlite3": "^6.0.1"
   },
-  "devDependencies": {},
   "autoload": {
     "App": "./app"
   }
