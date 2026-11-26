@@ -1,53 +1,21 @@
 @layout('layouts.principal')
 @section('main') 
 <script>
-async function getClient()
-{
-	axios.get('/getClient', {
-    params: {
-      email: document.getElementById("EMAIL").value
-    }
-	})
-	.then(function (response) {
-		console.log(response)
-		if(response.status==204)
-		{
-			alert("Usuario no registrado, rellene todos los datos y complete el checkout para continuar")			
-		}else
-		{
-			document.getElementById("NAME").value=response.data.name
-			document.getElementById("PHONE").value=response.data.phone
-			document.getElementById("ADDRESS").value=response.data.address
-			document.getElementById("CITY").value=response.data.city
-			document.getElementById("COUNTRY").value=response.data.country
-		}
-	})
-	.catch(function (error) {
-		alert("Usuario no registrado, rellene todos los datos y complete el checkout para continuar")
-	})
-	.then(function () {
-		// always executed
-	});
-}
-function formatCurrency(amount)
-{
-		return "$" + amount.toFixed(0).replace(/\d(?=(\d{3})+\.)/g, "$&.");
-}
+const copFormatter = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })
+
 async function validateCoupon()
 {
-	await axios.get('/validateCoupon', {
-    params: {
-      code: document.getElementById("COUPON").value
-    }
-	})
-	.then(function (response) {
-		document.getElementById("txtCoupon").innerHTML = document.getElementById("txtTotal2").innerHTML * (response.data.discount)/100
-		document.getElementById("txtTotal").innerHTML = formatCurrency(document.getElementById("txtTotal2").innerHTML-document.getElementById("txtCoupon").innerHTML)
-		document.getElementById("txtCoupon").innerHTML = formatCurrency(document.getElementById("txtTotal2").innerHTML * (response.data.discount)/100);		
-	})
-	.catch(function (error) {
-		window.alert("Cupón invalido")
-	});
+	const subtotal = Number(document.getElementById("txtSubtotal").dataset.amount)
+	const shipping = Number(document.getElementById("txtShipping").dataset.amount)
+
+	try {
+		const response = await axios.get('/validateCoupon', { params: { code: document.getElementById("COUPON").value } })
+		const discount = Math.round(subtotal * response.data.discount / 100)
+		document.getElementById("txtCoupon").innerHTML = copFormatter.format(discount)
+		document.getElementById("txtTotal").innerHTML = copFormatter.format(subtotal - discount + shipping)
+	} catch (error) {
+		window.alert("Cupón inválido o ya usado")
+	}
 }
 </script>
 	<main class="bg_gray">		
@@ -78,10 +46,6 @@ async function validateCoupon()
 							<div class="form-group">
 								<input required type="email" class="form-control" id="EMAIL" name="EMAIL" placeholder="Email">
 							</div>
-							<div class="form-group">
-								<input type="button" value="Verificar correo" onclick="getClient()" class="btn_1 full-width">
-							</div>
-							<hr>
 							<div class="form-group">
 								<div class="form-group">
 									<input required type="text" class="form-control" placeholder="Nombre completo" id="NAME" name="NAME">
@@ -374,12 +338,11 @@ async function validateCoupon()
 							@endeach
 						</ul>
 						<ul>
-							<li class="clearfix"><em><strong>Subtotal</strong></em>  <span>{{prettyprices.subtotal}}</span></li>
-							<li class="clearfix"><em><strong>Envío</strong></em> <span>{{prettyprices.shipping}}</span></li>
+							<li class="clearfix"><em><strong>Subtotal</strong></em>  <span id="txtSubtotal" data-amount="{{prices.subtotal}}">{{prettyprices.subtotal}}</span></li>
+							<li class="clearfix"><em><strong>Envío</strong></em> <span id="txtShipping" data-amount="{{prices.shipping}}">{{prettyprices.shipping}}</span></li>
 							<li class="clearfix"><em><strong>Descuento</strong></em>  <span><p id="txtCoupon">$ 0</p> </span></li>
 						</ul>
 						<div class="total clearfix">TOTAL <span><p id="txtTotal">{{prettyprices.total}}</p></span></div>
-						<div class="total clearfix" style="display:none">TOTAL <span><p id="txtTotal2">{{prices.total}}</p></span></div>
 						<div class="form-group">
 								<label class="container_check">Acepto los terminos y condiciones
 								  <input type="checkbox" required>
@@ -388,8 +351,10 @@ async function validateCoupon()
 							</div>
 						<label for="">Tipo de pago</label>
 						<select name="payment_type" id="" class="form-control">
+							<option value="cash_on_delivery">Pago contraentrega</option>
+							@if(gatewayEnabled)
 							<option value="gateway">Pasarela de pago</option>
-							<option value="cash_on_delivery">Pago Contraentrega</option>
+							@endif
 						</select>
 						<hr>
 						<div class="row">

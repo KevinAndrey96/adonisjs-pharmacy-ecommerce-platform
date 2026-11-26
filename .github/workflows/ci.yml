@@ -2,40 +2,65 @@ name: CI
 
 on:
   push:
-    branches: [ master, main ]
+    branches: [main]
   pull_request:
-    branches: [ master, main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-and-test:
+  quality:
+    name: Lint y pruebas HTTP (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        node-version: [18.x, 20.x]
-
+        node: [18, 20, 22]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          node-version: ${{ matrix.node }}
+          cache: npm
 
-      - name: Install dependencies
-        run: npm install
+      - run: npm ci --legacy-peer-deps
 
-      - name: Syntax and AST Validation
-        run: node -c server.js ace app/**/*.js start/*.js config/*.js database/**/*.js
+      - run: npm run lint
 
-      - name: Setup Environment File
+      - name: Preparar entorno y base SQLite
         run: |
           cp .env.example .env
-          sed -i 's/DB_CONNECTION=mysql/DB_CONNECTION=sqlite/' .env
+          sed -i "s/^APP_KEY=.*/APP_KEY=$(openssl rand -hex 16)/" .env
+          node ace migration:run --force
+          node ace seed --force
 
-      - name: Verify Database Migrations
-        run: node ace migration:run
+      - run: npm test
 
-      - name: Verify Database Seeders
-        run: node ace seed
+  docker:
+    name: Imagen Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: APP_KEY=ci docker compose config --quiet
+
+      - run: docker build -t pharmacy-store .
+
+      - name: Arrancar el contenedor con SQLite y esperar el healthcheck
+        run: |
+          docker run -d --name pharmacy -e APP_KEY="$(openssl rand -hex 16)" -e DB_CONNECTION=sqlite -e DB_DATABASE=development pharmacy-store
+          docker exec pharmacy node ace migration:run --force
+          docker exec pharmacy node ace seed --force
+          for i in $(seq 1 30); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' pharmacy)
+            [ "$status" = healthy ] && exit 0
+            sleep 2
+          done
+          docker logs pharmacy
+          exit 1

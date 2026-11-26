@@ -1,15 +1,15 @@
 {
-  "name": "pharmacy-ecommerce-platform",
+  "name": "adonisjs-pharmacy-ecommerce-platform",
   "version": "1.0.0",
-  "description": "Open-source full-stack pharmacy & drugstore e-commerce platform with inventory management backoffice built with Node.js and AdonisJS",
+  "description": "Tienda en línea de droguería con catálogo de salud y cuidado personal, cupones, boletín y backoffice de inventario y pedidos, construida con AdonisJS 4 y MySQL.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
+    "dev": "adonis serve --dev",
     "migrate": "node ace migration:run",
     "seed": "node ace seed",
-    "test": "node ace migration:status",
-    "syntax-check": "node -c server.js ace app/**/*.js start/*.js config/*.js database/**/*.js"
+    "lint": "eslint .",
+    "test": "node test/smoke.js"
   },
   "keywords": [
     "pharmacy",
@@ -19,12 +19,11 @@
     "nodejs",
     "adonisjs",
     "javascript",
-    "fullstack",
-    "open-source"
+    "fullstack"
   ],
   "author": "Kevin Andrey Herrera Silva <kahs_kevin@hotmail.com>",
-  "license": "MIT",
-  "private": false,
+  "license": "UNLICENSED",
+  "private": true,
   "dependencies": {
     "@adonisjs/ace": "^5.0.8",
     "@adonisjs/auth": "^3.0.7",
@@ -40,10 +39,17 @@
     "axios": "^0.19.2",
     "form-data": "^3.0.0",
     "mysql": "^2.18.1",
-    "objection": "^2.2.2",
     "sqlite3": "^6.0.1"
   },
   "autoload": {
     "App": "./app"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

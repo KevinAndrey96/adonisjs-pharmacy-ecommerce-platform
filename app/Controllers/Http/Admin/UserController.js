@@ -5,24 +5,22 @@ class UserController {
     const { email, password } = request.all()
     try {
       await auth.attempt(email, password)
+
       return response.redirect('/dashboard')
-    } catch (error) {
+    } catch {
       session.flash({ type: 'danger', message: 'Credenciales inválidas. Por favor verifique su correo y contraseña.' })
+
       return response.redirect('/login')
     }
-  }
-
-  show ({ auth, params }) {
-    if (auth.user.id !== Number(params.id)) {
-      return 'Acceso denegado: no puede ver el perfil de otro usuario.'
-    }
-    return auth.user
   }
 
   async logout ({ response, auth }) {
     try {
       await auth.logout()
-    } catch (e) {}
+    } catch {
+      // Guests have no session to close.
+    }
+
     return response.redirect('/login')
   }
 }

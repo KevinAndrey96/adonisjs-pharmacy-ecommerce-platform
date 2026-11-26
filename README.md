@@ -1,151 +1,128 @@
-# PharmaStore E-Commerce Platform
+# Tienda en línea de droguería con backoffice (AdonisJS)
 
-[![CI](https://github.com/KevinAndrey96/pharmacy-ecommerce-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/KevinAndrey96/pharmacy-ecommerce-platform/actions/workflows/ci.yml)
-[![Node.js Version](https://img.shields.io/badge/Node.js-18.x%20%7C%2020.x-green.svg)](https://nodejs.org/)
-[![AdonisJS](https://img.shields.io/badge/Framework-AdonisJS%204.1-purple.svg)](https://adonisjs.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/KevinAndrey96/adonisjs-pharmacy-ecommerce-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/KevinAndrey96/adonisjs-pharmacy-ecommerce-platform/actions/workflows/ci.yml)
+![Node.js 18 a 22](https://img.shields.io/badge/Node.js-18%20%7C%2020%20%7C%2022-339933?logo=nodedotjs&logoColor=white)
+![AdonisJS 4](https://img.shields.io/badge/AdonisJS-4.1-5A45FF?logo=adonisjs&logoColor=white)
+![MySQL y SQLite](https://img.shields.io/badge/MySQL%208.0%20%7C%20SQLite-4479A1?logo=mysql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
-An open-source, full-stack pharmacy and drugstore e-commerce platform with an integrated administrative backoffice for catalog, inventory, and order management. Built on Node.js and AdonisJS with support for MySQL and SQLite.
+Tienda en línea para una droguería colombiana, con catálogo de medicamentos de venta libre, cuidado personal e higiene oral, y su backoffice de inventario, pedidos y clientes. Se construyó en 2020 con AdonisJS 4, Edge y Lucid; los clientes compran sin crear cuenta y pagan contraentrega o con la pasarela de Credibanco.
 
----
+## Funcionalidades
 
-## 📑 Architecture Overview
+**Tienda**
+
+- Portada con cinco vitrinas por categoría, categorías y detalle de producto con relacionados.
+- Búsqueda por nombre, categoría padre o categoría, filtro por precio mínimo y máximo, y orden por precio o nombre.
+- Carrito en el navegador. El checkout recalcula cada línea con el precio de la base de datos, nunca con el que envía el navegador, limita las cantidades a 1..20 y suma un envío fijo de $ 1.700.
+- Datos de envío obligatorios y validados en el servidor; nadie puede consultar los datos de otro cliente por su correo.
+- Cupones de un solo uso que descuentan sobre el subtotal, y boletín que entrega un cupón de bienvenida generado con `crypto` (uno por correo).
+- Pago contraentrega por defecto. Con `ENABLE_PAYMENT_GATEWAY=true` aparece la opción de pasarela: el pedido se registra en Credibanco y el cliente pasa a su formulario de pago; si la pasarela falla o no responde en 10 segundos, el pedido queda pendiente y el error se registra en el log.
+- Correo de confirmación del pedido.
+
+**Backoffice** (`/login`, con sesión)
+
+- Tablero con productos, categorías, pedidos, clientes e ingresos, y los últimos pedidos.
+- Productos con imagen (PNG, JPG o GIF de hasta 10 MB), pedidos con detalle y edición de clientes.
+- Los visitantes sin sesión se redirigen al login, y todos los formularios llevan token CSRF (Shield).
+
+## Arquitectura
 
 ```mermaid
-flowchart TD
-    subgraph ClientLayer ["Clients & Channels"]
-        BrowserStorefront["Storefront Customer UI (Edge Templates)"]
-        BrowserAdmin["Backoffice Management Dashboard"]
-    end
-
-    subgraph AppLayer ["PharmaStore Application Core"]
-        Router["AdonisJS HTTP Router"]
-        AuthMid["Auth & Session Middleware"]
-        StoreCtrl["Storefront Controllers (Catalog, Cart, Checkout, Newsletter)"]
-        AdminCtrl["Admin Controllers (Products, Orders, Clients, Analytics)"]
-        LucidORM["Lucid ORM / Knex Query Builder"]
-        Mailer["Mail Service (SMTP / Mailpit)"]
-        PaymentInt["Payment Gateway Integration"]
-    end
-
-    subgraph DataLayer ["Data & Infrastructure"]
-        SQLStore[("Relational Database (MySQL 8 / SQLite)")]
-        FileStorage[("Media & Upload Storage (/public/files)")]
-        MailpitSvc["Mailpit Test Inbox"]
-    end
-
-    BrowserStorefront --> Router
-    BrowserAdmin --> AuthMid --> Router
-    Router --> StoreCtrl
-    Router --> AdminCtrl
-    StoreCtrl --> LucidORM
-    AdminCtrl --> LucidORM
-    StoreCtrl --> Mailer
-    StoreCtrl --> PaymentInt
-    AdminCtrl --> FileStorage
-    LucidORM --> SQLStore
-    Mailer --> MailpitSvc
+flowchart LR
+    Cliente -->|tienda| Rutas[start/routes.js]
+    Admin[Administrador] -->|backoffice con sesión| Rutas
+    Rutas --> Tienda[Index, Product, Coupon, Newsletter]
+    Rutas --> Backoffice[Admin: Dashboard, Product, Order, Client, User]
+    Tienda --> Servicios[Services: Cart, Customer y Money]
+    Tienda --> Modelos[Lucid: Product, Category, Order, Client, Coupon, Newsletter]
+    Backoffice --> Modelos
+    Modelos --> BD[(MySQL 8.0 o SQLite)]
+    Tienda -.->|correo| SMTP[Mailpit o SMTP]
+    Tienda -.->|registro del pago| Credibanco
 ```
 
----
+- `app/Services/Cart.js` interpreta el carrito y lo resuelve contra el catálogo.
+- `app/Services/Customer.js` valida los datos de envío del checkout.
+- `app/Services/Money.js` formatea pesos colombianos para todas las vistas.
+- `app/Exceptions/Handler.js` redirige al login cuando falta la sesión en el backoffice.
 
-## ✨ Features
+## Puesta en marcha
 
-### Storefront
-- **Product Catalog & Search**: Real-time filtering by therapeutic category, parent classification, price range, and alphabetical order.
-- **Cart & Checkout Workflow**: Session-backed multi-item shopping cart, shipping calculations, and coupon redemption engine.
-- **Payment Processing**: Multi-gateway abstraction supporting Cash-on-Delivery (contraentrega) and hosted payment gateway redirection.
-- **Newsletter Engine**: Automated customer onboarding that generates unique single-use promotional coupons delivered via email.
-
-### Administration Backoffice
-- **Secure Authentication**: Role-aware session authentication with encrypted credential verification.
-- **Catalog Management**: Full CRUD capabilities for pharmaceutical products, SKU codes, pricing, categories, and image uploads.
-- **Orders & Fulfillment**: End-to-end tracking of customer orders, status transitions, and items detail.
-- **Customer CRM**: Centralized directory of registered clients, addresses, and order history.
-- **Executive Metrics**: Analytical dashboard tracking gross volume, total orders, catalog size, and customer base.
-
----
-
-## 🚀 Quick Start
-
-### Option A: Local Development (SQLite)
-
-1. **Clone repository and install dependencies**:
-   ```bash
-   git clone git@github.com-personal:KevinAndrey96/pharmacy-ecommerce-platform.git
-   cd pharmacy-ecommerce-platform
-   npm install
-   ```
-
-2. **Configure environment variables**:
-   ```bash
-   cp .env.example .env
-   # Set DB_CONNECTION=sqlite for instant local zero-setup execution
-   ```
-
-3. **Run migrations and seed pharmaceutical catalog**:
-   ```bash
-   node ace migration:run
-   node ace seed
-   ```
-
-4. **Launch development server**:
-   ```bash
-   npm start
-   # Server listens on http://127.0.0.1:3333
-   ```
-
-Default administrative credentials:
-- **URL**: `http://localhost:3333/login`
-- **Email**: `admin@pharmastore.local`
-- **Password**: `adminpassword123`
-
----
-
-### Option B: Docker Compose (Full Stack with MySQL & Mailpit)
-
-Launch the complete isolated stack with a single command:
+### Local con SQLite
 
 ```bash
-make docker-up
+npm ci --legacy-peer-deps
+cp .env.example .env
+sed -i.bak "s/^APP_KEY=.*/APP_KEY=$(openssl rand -hex 16)/" .env && rm .env.bak
+node ace migration:run
+node ace seed
+npm run dev        # http://127.0.0.1:3333
 ```
 
-Services exposed:
-- **Web Application**: `http://localhost:3333`
-- **Mailpit Web UI (Email Inbox)**: `http://localhost:8025`
-- **MySQL Database**: `localhost:3306`
+### Docker Compose (MySQL y Mailpit)
 
-Run migrations inside the container:
 ```bash
-make docker-migrate
-make docker-seed
+export APP_KEY=$(openssl rand -hex 16)
+docker compose up -d --build
+docker compose exec app node ace migration:run --force
+docker compose exec app node ace seed --force
 ```
 
----
+- Tienda: http://localhost:3333
+- Mailpit: http://localhost:8025
 
-## 🛠️ Makefile Command Reference
+La imagen corre como el usuario `node`, sin privilegios, y tiene healthcheck. El compose exige `APP_KEY`: no trae una clave por defecto.
 
-| Target | Description |
-| :--- | :--- |
-| `make help` | Display list of available build and lifecycle commands. |
-| `make dev` | Start AdonisJS server locally with `.env` autoloading. |
-| `make migrate` | Execute pending database migrations. |
-| `make rollback` | Rollback the most recent migration batch. |
-| `make seed` | Populate database with pharmaceutical categories and products. |
-| `make docker-up` | Build and run application, MySQL 8, and Mailpit containers. |
-| `make docker-down`| Stop and clean up all Docker Compose resources. |
-| `make docker-logs`| Tail logs across running containers. |
+### Pasarela de pago
 
----
+| Variable | Uso |
+| --- | --- |
+| `ENABLE_PAYMENT_GATEWAY` | `true` muestra la opción de pasarela y registra el pago en Credibanco; cualquier otro valor deja solo contraentrega. |
+| `GATEWAY_USERNAME`, `GATEWAY_PASSWORD` | Credenciales del comercio. Son obligatorias si la pasarela está activa. |
+| `GATEWAY_URL` | Endpoint `register.do`; por defecto, el ambiente de pruebas de Credibanco. |
 
-## 🔒 Security & Privacy
+### Datos de demostración
 
-- Historical sensitive keys and local secrets have been scrubbed from git history.
-- Payment gateway credentials, database connections, and SMTP configuration are driven strictly through environment variables.
-- CSRF protection and input sanitization are enabled globally via `@adonisjs/shield`.
+El seeder crea categorías, productos, los cupones `BIENVENIDO10` y `SALUD20` y el usuario `admin@example.com` con la contraseña `adminpassword123`, solo para el entorno local.
 
----
+## Calidad
 
-## 📄 License
+```bash
+npm run lint   # ESLint
+npm test       # pruebas HTTP con node:test
+```
 
-This project is licensed under the [MIT License](LICENSE).
+Las pruebas levantan el servidor real sobre la base SQLite sembrada y revisan:
+
+- que las páginas de la tienda y la búsqueda carguen;
+- los endpoints JSON del carrito y de cupones;
+- los 404;
+- la redirección del backoffice al login;
+- que no exista la consulta de clientes por correo;
+- el rechazo de un POST sin token CSRF y de un checkout sin datos de envío;
+- el boletín, que entrega un solo cupón por correo;
+- una compra completa con cupón, que confirma el precio de la base, el límite de cantidad, el descuento sobre el subtotal, el envío y el cupón marcado como usado;
+- que una pasarela caída deje el pedido pendiente y muestre la confirmación.
+
+El CI corre lint y pruebas en Node 18, 20 y 22, construye la imagen Docker y espera a que el contenedor quede saludable.
+
+## Historia
+
+Proyecto de 2020 y 2021 para una droguería de Bogotá, hecho con Camilo Gamba. En noviembre de 2026 se ordenó sin cambiar el stack:
+
+- se quitó el endpoint que devolvía nombre, teléfono y dirección de cualquier cliente a partir de su correo;
+- el checkout valida los datos de envío en el servidor;
+- los precios del carrito salen del catálogo y las cantidades negativas o enormes ya no alteran el total;
+- el descuento del cupón ya no se calcula en el navegador sobre un total sin envío;
+- un producto o cupón inexistente responde 404 en lugar de 500;
+- los correos que fallan ya no tumban el pedido, y los errores de la pasarela quedan registrados;
+- la búsqueda se reescribió como una sola consulta, y la lógica de carrito, cliente y moneda pasó a servicios;
+- se eliminaron dependencias sin uso;
+- el lockfile se regeneró, la imagen Docker corre sin root y se agregaron ESLint, pruebas y CI.
+
+Las credenciales que alguna vez estuvieron en el código se purgaron del historial.
+
+## Licencia
+
+Sin licencia de código abierto. El proyecto nació como trabajo para un cliente y se publica como muestra de portafolio: todos los derechos reservados.

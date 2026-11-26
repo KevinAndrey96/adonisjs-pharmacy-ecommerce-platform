@@ -1,30 +1,47 @@
 'use strict'
-const Env = use('Env')
+
+const crypto = require('crypto')
+
 const Newsletter = use('App/Models/Newsletter')
 const Coupon = use('App/Models/Coupon')
+const Env = use('Env')
+const Logger = use('Logger')
+
+const WELCOME_DISCOUNT = 10
+
+function alertAndGoHome (message) {
+  return `<script>window.alert(${JSON.stringify(message)});window.location.href = '/'</script>`
+}
 
 class NewsletterController {
-  async store ({ request, response }) {
+  async store ({ request }) {
+    const data = request.only(['email', 'first_name', 'last_name', 'phone'])
+    const email = String(data.email || '').trim().toLowerCase()
+
+    if (!email || await Newsletter.findBy('email', email)) {
+      return alertAndGoHome('Este correo ya se encuentra registrado en el boletín.')
+    }
+
+    await Newsletter.create({ ...data, email })
+    const coupon = await Coupon.create({
+      code: crypto.randomBytes(5).toString('hex').toUpperCase(),
+      discount: WELCOME_DISCOUNT,
+      status: 'active'
+    })
+
     try {
-      const userData = request.only(['email', 'first_name', 'last_name', 'phone'])
-      const newsletter = await Newsletter.create(userData)
-
-      const random_code = Math.random().toString(36).substring(2, 6).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase()
-      const coupon = await Coupon.create({ code: random_code, discount: 10, status: 'active' })
-
       const Mail = use('Mail')
-      const mailFrom = Env.get('MAIL_FROM', 'no-reply@pharmastore.local')
       await Mail.send('emails.coupon', { coupon: coupon.toJSON() }, (message) => {
         message
-          .to(newsletter.email)
-          .from(mailFrom)
-          .subject('Bienvenido a PharmaStore - Tu Cupón de Descuento')
-        console.log('Enviado Correo Newsletter')
+          .to(email)
+          .from(Env.get('MAIL_FROM', 'no-reply@example.com'))
+          .subject('Bienvenido: tu cupón de descuento')
       })
-    } catch (e) {
-      return "<script>window.alert('Usted ya se encuentra registrado en el newsletter');window.location.href = '/'</script>"
+    } catch (error) {
+      Logger.warning('newsletter coupon email not sent: %s', error.message)
     }
-    return "<script>window.alert('Gracias por registrarse en nuestro newsletter, se ha enviado un cupón de descuento a su correo electrónico');window.location.href = '/'</script>"
+
+    return alertAndGoHome('Gracias por suscribirte. Te enviamos un cupón de descuento a tu correo.')
   }
 }
 

@@ -18,14 +18,14 @@ const Coupon = use('App/Models/Coupon')
 class PharmacySeeder {
   async run () {
     // 1. Seed Admin User
-    const existingAdmin = await User.findBy('email', 'admin@pharmastore.local')
+    const existingAdmin = await User.findBy('email', 'admin@example.com')
     if (!existingAdmin) {
       await User.create({
         username: 'admin',
-        email: 'admin@pharmastore.local',
+        email: 'admin@example.com',
         password: 'adminpassword123'
       })
-      console.log('✓ Admin user created (admin@pharmastore.local / adminpassword123)')
+      console.log('✓ Admin user created (admin@example.com / adminpassword123)')
     }
 
     // 2. Seed Categories

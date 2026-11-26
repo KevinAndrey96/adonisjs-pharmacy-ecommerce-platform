@@ -4,16 +4,9 @@ const Product = use('App/Models/Product')
 const Category = use('App/Models/Category')
 const Order = use('App/Models/Order')
 const Client = use('App/Models/Client')
+const { formatCop } = use('App/Services/Money')
 
 class DashboardController {
-  formatCurrency (locales, currency, fractionDigits, number) {
-    return new Intl.NumberFormat(locales, {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: fractionDigits
-    }).format(number || 0)
-  }
-
   async index ({ view }) {
     const productsCount = await Product.getCount()
     const categoriesCount = await Category.getCount()
@@ -30,7 +23,7 @@ class DashboardController {
         categories: categoriesCount,
         orders: ordersCount,
         clients: clientsCount,
-        revenue: this.formatCurrency('es-CO', 'COP', 0, totalRevenue)
+        revenue: formatCop(totalRevenue)
       },
       latestOrders: orders.toJSON()
     })

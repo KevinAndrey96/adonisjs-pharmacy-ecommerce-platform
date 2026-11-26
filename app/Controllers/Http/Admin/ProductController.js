@@ -2,21 +2,14 @@
 
 const Product = use('App/Models/Product')
 const Category = use('App/Models/Category')
+const { formatCop } = use('App/Services/Money')
 
 class ProductController {
-  formatCurrency (locales, currency, fractionDigits, number) {
-    return new Intl.NumberFormat(locales, {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: fractionDigits
-    }).format(number || 0)
-  }
-
   async index ({ view }) {
     const products = await Product.all()
     const productsFormatted = products.toJSON().map((prod) => ({
       ...prod,
-      price: this.formatCurrency('es-CO', 'COP', 0, prod.price)
+      price: formatCop(prod.price)
     }))
 
     return view.render('admin.products', { products: productsFormatted })
